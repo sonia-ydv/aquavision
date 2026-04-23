@@ -19,7 +19,7 @@ AI-powered tool to:
 
 @st.cache_resource
 def load_model():
-    model = YOLO("yolov8n.pt")  # auto-downloads
+    model = YOLO("yolov8n.pt")  
     return model
 
 model = load_model()
