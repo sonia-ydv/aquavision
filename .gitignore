@@ -1,2 +1,5 @@
-*.pt
 __pycache__/
+*.pyc
+.env
+venv/
+yolov8n.pt
