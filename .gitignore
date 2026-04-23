@@ -19,3 +19,4 @@ runs/
 # Large files
 *.mp4
 *.csv
+*.pt

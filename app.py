@@ -22,7 +22,7 @@ AI-powered tool to:
 
 @st.cache_resource
 def load_models():
-    yolo = YOLO("model/yolov8.pt")
+    yolo = YOLO("yolov8n.pt")
     processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
     caption_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
     return yolo, processor, caption_model
