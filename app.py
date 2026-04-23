@@ -7,11 +7,9 @@ import datetime
 
 st.set_page_config(page_title="Deep-Sea Vision AI", layout="wide")
 
-st.title("🌊 Deep-Sea Vision AI")
+st.title(" AquaVision AI")
 
-# -----------------------------
-# TRY LOADING YOLO (SAFE MODE)
-# -----------------------------
+
 @st.cache_resource
 def load_yolo():
     try:
@@ -23,9 +21,7 @@ def load_yolo():
 
 yolo_model, YOLO_AVAILABLE = load_yolo()
 
-# -----------------------------
-# FUNCTIONS
-# -----------------------------
+
 def enhance_image(img):
     return cv2.detailEnhance(img, sigma_s=10, sigma_r=0.15)
 
@@ -63,9 +59,7 @@ def generate_caption(brightness, blue_ratio):
     else:
         return "Clear underwater scene"
 
-# -----------------------------
-# DEMO DETECTION (fallback)
-# -----------------------------
+
 def fake_detection(img):
     h, w, _ = img.shape
     boxes = []
@@ -85,9 +79,7 @@ def fake_detection(img):
 
     return img, boxes
 
-# -----------------------------
-# REAL YOLO DETECTION
-# -----------------------------
+
 def real_detection(img):
     results = yolo_model(img)
     labels = []
@@ -102,17 +94,13 @@ def real_detection(img):
 
     return img, labels
 
-# -----------------------------
-# HEATMAP
-# -----------------------------
+
 def heatmap(img):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     heat = cv2.applyColorMap(gray, cv2.COLORMAP_JET)
     return cv2.addWeighted(img, 0.6, heat, 0.4, 0)
 
-# -----------------------------
-# INPUT
-# -----------------------------
+
 input_mode = st.radio("📥 Input", ["Upload", "Webcam"])
 
 image = None
@@ -127,9 +115,7 @@ else:
     if cam:
         image = Image.open(cam)
 
-# -----------------------------
-# MAIN
-# -----------------------------
+
 if image:
     col1, col2 = st.columns(2)
 
@@ -139,7 +125,6 @@ if image:
     img_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
     enhanced = enhance_image(img_cv)
 
-    # Decide mode
     if YOLO_AVAILABLE:
         st.success("🟢 Real YOLO Model Active")
         enhanced, labels = real_detection(enhanced)
