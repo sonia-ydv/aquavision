@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environment
+venv/
+env/
+
+# YOLO / training outputs
+runs/
+*.pt
+
+# System files
+.DS_Store
+
+# Streamlit
+.streamlit/
+
+# Large files
+*.mp4
+*.csv
