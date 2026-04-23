@@ -1,104 +1,185 @@
 import streamlit as st
 import numpy as np
+import cv2
+from PIL import Image
 import pandas as pd
-from PIL import Image, ImageEnhance, ImageFilter
 import datetime
-import random
 
 st.set_page_config(page_title="Deep-Sea Vision AI", layout="wide")
 
 st.title("🌊 Deep-Sea Vision AI")
-st.markdown("""
-AI-powered tool to:
-- Enhance underwater images  
-- Detect marine patterns  
-- Generate captions  
-- Estimate pollution levels  
-""")
 
-# -------- IMAGE ENHANCEMENT (No CV2) --------
-def enhance_image(image):
-    image = ImageEnhance.Color(image).enhance(1.8)
-    image = ImageEnhance.Contrast(image).enhance(1.5)
-    image = image.filter(ImageFilter.SHARPEN)
-    return image
+# -----------------------------
+# TRY LOADING YOLO (SAFE MODE)
+# -----------------------------
+@st.cache_resource
+def load_yolo():
+    try:
+        from ultralytics import YOLO
+        model = YOLO("yolov8n.pt")
+        return model, True
+    except Exception as e:
+        return None, False
 
-# -------- FAKE AI DETECTION --------
-def detect_objects(image):
-    objects = ["Fish", "Coral", "Plastic", "Rock", "Seaweed"]
-    detections = []
+yolo_model, YOLO_AVAILABLE = load_yolo()
 
-    for _ in range(random.randint(1, 4)):
-        obj = random.choice(objects)
-        conf = round(random.uniform(0.5, 0.95), 2)
-        detections.append((obj, conf))
+# -----------------------------
+# FUNCTIONS
+# -----------------------------
+def enhance_image(img):
+    return cv2.detailEnhance(img, sigma_s=10, sigma_r=0.15)
 
-    return detections
+def analyze_image(img):
+    h, w, c = img.shape
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    brightness = np.mean(gray)
 
-# -------- SMART CAPTION --------
-def generate_caption(detections):
-    if not detections:
-        return "No visible marine life detected."
+    b, g, r = cv2.split(img)
+    blue_ratio = np.mean(b) / (np.mean(r) + 1e-5)
 
-    names = [d[0] for d in detections]
-    return f"Underwater scene showing {', '.join(names)}."
+    return h, w, brightness, blue_ratio
 
-# -------- POLLUTION SCORE --------
-def pollution_index(detections):
-    return sum(10 for d in detections if "Plastic" in d[0])
+def pollution_score(brightness, blue_ratio):
+    score = 0
+    if brightness < 60:
+        score += 30
+    if blue_ratio > 1.3:
+        score += 20
+    return min(score, 100)
 
-# -------- AGENT DECISION --------
-def agent_decision(detections):
-    if not detections:
-        return "No Objects Detected"
-
-    avg_conf = sum(d[1] for d in detections) / len(detections)
-
-    if avg_conf < 0.6:
-        return "⚠️ Low Confidence"
+def ai_decision(score):
+    if score < 30:
+        return "✅ Clean Water"
+    elif score < 60:
+        return "⚠️ Moderate Pollution"
     else:
-        return "✅ High Confidence"
+        return "🚨 High Pollution"
 
+def generate_caption(brightness, blue_ratio):
+    if blue_ratio > 1.5:
+        return "Deep underwater scene"
+    elif brightness < 50:
+        return "Low visibility underwater"
+    else:
+        return "Clear underwater scene"
 
-# -------- UI --------
-uploaded_file = st.file_uploader("📤 Upload underwater image", type=["jpg", "png"])
+# -----------------------------
+# DEMO DETECTION (fallback)
+# -----------------------------
+def fake_detection(img):
+    h, w, _ = img.shape
+    boxes = []
 
-if uploaded_file:
-    image = Image.open(uploaded_file)
+    for _ in range(np.random.randint(1, 3)):
+        x1 = np.random.randint(0, w//2)
+        y1 = np.random.randint(0, h//2)
+        x2 = x1 + np.random.randint(50, 120)
+        y2 = y1 + np.random.randint(50, 120)
 
+        label = np.random.choice(["fish", "plastic", "rock"])
+        boxes.append(label)
+
+        cv2.rectangle(img, (x1, y1), (x2, y2), (0,255,0), 2)
+        cv2.putText(img, label, (x1, y1-5),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 1)
+
+    return img, boxes
+
+# -----------------------------
+# REAL YOLO DETECTION
+# -----------------------------
+def real_detection(img):
+    results = yolo_model(img)
+    labels = []
+
+    for r in results:
+        for box in r.boxes:
+            cls = int(box.cls[0])
+            label = yolo_model.names[cls]
+            labels.append(label)
+
+        img = r.plot()
+
+    return img, labels
+
+# -----------------------------
+# HEATMAP
+# -----------------------------
+def heatmap(img):
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    heat = cv2.applyColorMap(gray, cv2.COLORMAP_JET)
+    return cv2.addWeighted(img, 0.6, heat, 0.4, 0)
+
+# -----------------------------
+# INPUT
+# -----------------------------
+input_mode = st.radio("📥 Input", ["Upload", "Webcam"])
+
+image = None
+
+if input_mode == "Upload":
+    file = st.file_uploader("Upload image", type=["jpg","png","jpeg"])
+    if file:
+        image = Image.open(file)
+
+else:
+    cam = st.camera_input("Take a picture")
+    if cam:
+        image = Image.open(cam)
+
+# -----------------------------
+# MAIN
+# -----------------------------
+if image:
     col1, col2 = st.columns(2)
 
     with col1:
-        st.image(image, caption="Original Image", use_column_width=True)
+        st.image(image, caption="Original", use_column_width=True)
 
-    enhanced = enhance_image(image)
+    img_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+    enhanced = enhance_image(img_cv)
+
+    # Decide mode
+    if YOLO_AVAILABLE:
+        st.success("🟢 Real YOLO Model Active")
+        enhanced, labels = real_detection(enhanced)
+    else:
+        st.warning("🟡 Demo Mode (YOLO not available)")
+        enhanced, labels = fake_detection(enhanced)
 
     with col2:
-        st.image(enhanced, caption="Enhanced Image", use_column_width=True)
+        st.image(enhanced, caption="Processed", use_column_width=True)
 
-    with st.spinner("🤖 AI analyzing..."):
-        detections = detect_objects(enhanced)
-        caption = generate_caption(detections)
-        pollution = pollution_index(detections)
-        decision = agent_decision(detections)
+    h, w, brightness, blue_ratio = analyze_image(enhanced)
+    score = pollution_score(brightness, blue_ratio)
 
     st.subheader("📊 Results")
+    st.write("**Caption:**", generate_caption(brightness, blue_ratio))
+    st.write("**Resolution:**", f"{w} x {h}")
+    st.write("**Brightness:**", round(brightness,2))
+    st.write("**Blue Ratio:**", round(blue_ratio,2))
+    st.write("**Pollution Score:**", score)
+    st.write("**Decision:**", ai_decision(score))
 
-    st.write("**📝 Caption:**", caption)
+    st.write("**Detected Objects:**")
+    if labels:
+        for l in labels:
+            st.write("-", l)
+    else:
+        st.write("No objects detected")
 
-    st.write("**🎯 Detected Objects:**")
-    for obj, conf in detections:
-        st.write(f"- {obj} ({conf})")
+    st.subheader("🔥 Heatmap")
+    st.image(heatmap(enhanced), use_column_width=True)
 
-    st.write(f"**🌍 Pollution Index:** {pollution}")
-    st.write(f"**🤖 AI Decision:** {decision}")
+    # CSV
+    df = pd.DataFrame([{
+        "Width": w,
+        "Height": h,
+        "Brightness": brightness,
+        "BlueRatio": blue_ratio,
+        "Score": score,
+        "Objects": ", ".join(labels),
+        "Time": datetime.datetime.now()
+    }])
 
-    df = pd.DataFrame(detections, columns=["Object", "Confidence"])
-    df["Pollution Index"] = pollution
-    df["Timestamp"] = datetime.datetime.now()
-
-    st.download_button(
-        "📥 Download Report",
-        df.to_csv(index=False),
-        file_name="report.csv"
-    )
+    st.download_button("📥 Download Report", df.to_csv(index=False), "report.csv")
