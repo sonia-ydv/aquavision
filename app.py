@@ -139,14 +139,14 @@ if image:
     score = pollution_score(brightness, blue_ratio)
 
     st.subheader("📊 Results")
-    st.write("**Caption:**", generate_caption(brightness, blue_ratio))
-    st.write("**Resolution:**", f"{w} x {h}")
-    st.write("**Brightness:**", round(brightness,2))
-    st.write("**Blue Ratio:**", round(blue_ratio,2))
-    st.write("**Pollution Score:**", score)
-    st.write("**Decision:**", ai_decision(score))
+    st.write("*Caption:*", generate_caption(brightness, blue_ratio))
+    st.write("*Resolution:*", f"{w} x {h}")
+    st.write("*Brightness:*", round(brightness,2))
+    st.write("*Blue Ratio:*", round(blue_ratio,2))
+    st.write("*Pollution Score:*", score)
+    st.write("*Decision:*", ai_decision(score))
 
-    st.write("**Detected Objects:**")
+    st.write("*Detected Objects:*")
     if labels:
         for l in labels:
             st.write("-", l)
