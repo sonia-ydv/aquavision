@@ -110,7 +110,7 @@ if uploaded_file:
 
     st.write("**📝 Caption:**", caption)
 
-    # Detection Visualization (🔥 important for portfolio)
+    
     annotated = results[0].plot()
     st.image(annotated, caption="Detection Output")
 
