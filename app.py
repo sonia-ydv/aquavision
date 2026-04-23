@@ -2,11 +2,9 @@ import streamlit as st
 import cv2
 import pandas as pd
 from ultralytics import YOLO
-from transformers import BlipProcessor, BlipForConditionalGeneration
 from PIL import Image
 import numpy as np
 import datetime
-
 
 st.set_page_config(page_title="Deep-Sea Vision AI", layout="wide")
 
@@ -15,20 +13,27 @@ st.markdown("""
 AI-powered tool to:
 - Enhance underwater images  
 - Detect marine objects  
-- Generate captions  
 - Estimate pollution levels  
 """)
 
-
 @st.cache_resource
-def load_models():
-    yolo = YOLO("yolov8n.pt")
-    processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-    caption_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
-    return yolo, processor, caption_model
+def load_yolo():
+    return YOLO("yolov8n.pt")  
 
-yolo_model, processor, caption_model = load_models()
+yolo_model = load_yolo()
 
+ENABLE_CAPTION = False  
+
+if ENABLE_CAPTION:
+    from transformers import BlipProcessor, BlipForConditionalGeneration
+
+    @st.cache_resource
+    def load_caption_model():
+        processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+        model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
+        return processor, model
+
+    processor, caption_model = load_caption_model()
 
 def enhance_image(img):
     return cv2.detailEnhance(img, sigma_s=10, sigma_r=0.15)
@@ -42,12 +47,7 @@ def detect_objects(img):
             conf = float(box.conf[0])
             label = yolo_model.names[cls]
             detections.append((label, conf))
-    return detections
-
-def generate_caption(image):
-    inputs = processor(image, return_tensors="pt")
-    out = caption_model.generate(**inputs)
-    return processor.decode(out[0], skip_special_tokens=True)
+    return detections, results
 
 def pollution_index(detections):
     plastic_keywords = ["bottle", "plastic", "bag"]
@@ -79,40 +79,57 @@ if uploaded_file:
     img_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
     enhanced = enhance_image(img_cv)
 
-    with col2:
-        st.image(enhanced, caption="Enhanced Image", use_column_width=True)
+   
+    enhanced_rgb = cv2.cvtColor(enhanced, cv2.COLOR_BGR2RGB)
 
+    with col2:
+        st.image(enhanced_rgb, caption="Enhanced Image", use_column_width=True)
+
+    
     with st.spinner("🔍 Analyzing image..."):
         try:
-            detections = detect_objects(enhanced)
-            caption = generate_caption(image)
+            detections, results = detect_objects(enhanced_rgb)
             pollution = pollution_index(detections)
             decision = agent_decision(detections)
+
+            if ENABLE_CAPTION:
+                inputs = processor(image, return_tensors="pt")
+                out = caption_model.generate(**inputs)
+                caption = processor.decode(out[0], skip_special_tokens=True)
+            else:
+                caption = "Caption disabled for performance"
+
         except Exception as e:
-            st.error("Error during processing. Try another image.")
+            st.error("Processing failed. Try another image.")
             st.stop()
 
- 
+    st.success("Analysis Complete ✅")
+
+    
     st.subheader("📊 Results")
 
     st.write("**📝 Caption:**", caption)
 
-    st.write("**🎯 Detected Objects:**")
+    # Detection Visualization (🔥 important for portfolio)
+    annotated = results[0].plot()
+    st.image(annotated, caption="Detection Output")
+
+    # Table format
     if detections:
-        for obj, conf in detections:
-            st.write(f"- {obj} ({conf:.2f})")
+        df = pd.DataFrame(detections, columns=["Object", "Confidence"])
+        st.dataframe(df)
     else:
         st.write("No objects detected")
 
     st.write(f"**🌍 Pollution Index:** {pollution}")
     st.write(f"**🤖 AI Decision:** {decision}")
 
-    df = pd.DataFrame(detections, columns=["Object", "Confidence"])
-    df["Pollution Index"] = pollution
-    df["Timestamp"] = datetime.datetime.now()
+    df_export = pd.DataFrame(detections, columns=["Object", "Confidence"])
+    df_export["Pollution Index"] = pollution
+    df_export["Timestamp"] = datetime.datetime.now()
 
     st.download_button(
         "📥 Download Report (CSV)",
-        df.to_csv(index=False),
+        df_export.to_csv(index=False),
         file_name="deep_sea_report.csv"
     )
