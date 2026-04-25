@@ -2,7 +2,6 @@
 
 > Real-time AI-powered underwater image analysis for marine pollution detection and ecosystem health monitoring.
 
----
 
 ## Overview
 
@@ -12,7 +11,6 @@ AquaVision AI is a computer vision system that transforms raw underwater images 
 
 **Solution:** An end-to-end AI pipeline — from raw underwater image to a downloadable environmental health report — enabling faster, data-driven decisions for ocean conservation.
 
----
 
 ## Features
 
@@ -27,7 +25,6 @@ AquaVision AI is a computer vision system that transforms raw underwater images 
 | CSV Report Export | Downloadable structured report with all metrics and timestamps |
 | Dual Input Modes | Supports both file upload and live webcam capture |
 
----
 
 ## Getting Started
 
@@ -53,11 +50,9 @@ streamlit run app.py
 The app will launch at `https://aquavision-3m5prm7qtkttzr22yzq2b5.streamlit.app/`.
 
 
----
 
 ## How It Works
-
-
+![Picture](Images/How-it-works.png)
 
 ### Pollution Scoring Logic
 
@@ -67,12 +62,9 @@ The pollution index (0–100) is computed using:
 
 The system is a **hybrid AI** — YOLO handles detection (learned), while the scoring layer is rule-based for interpretability and auditability.
 
----
 
 ## Project Structure
-
-
----
+![Picture](Images/Project-structure.png)
 
 ## Tech Stack
 
@@ -80,8 +72,7 @@ The system is a **hybrid AI** — YOLO handles detection (learned), while the sc
 - **Computer Vision:** OpenCV, YOLOv8 (Ultralytics)
 - **Data Processing:** NumPy, Pandas
 - **Image Handling:** Pillow
-
----
+  
 
 ## Configuration
 
@@ -90,7 +81,6 @@ The app runs in two modes automatically:
 - **Real Mode** — If `ultralytics` is installed and `yolov8n.pt` is available, actual YOLO inference runs.
 - **Demo Mode** — If YOLO is unavailable, the app falls back to simulated detections, allowing the full pipeline to be demonstrated without GPU dependencies.
 
----
 
 ## Roadmap
 
@@ -101,7 +91,6 @@ The app runs in two modes automatically:
 - [ ] Advanced marine species classification
 - [ ] Global marine health dashboard
 
----
 
 ## Use Cases
 
@@ -110,13 +99,11 @@ The app runs in two modes automatically:
 - NGO field operations and conservation reporting
 - Government environmental policy support
 
----
 
 ## Contributing
 
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
----
 
 ## License
 
